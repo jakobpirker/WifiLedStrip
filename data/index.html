@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="LedStripApp">
+<head>
+    <meta charset="UTF-8">
+    <title>LedStripControl</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+</head>
+
+<body>
+
+	<section ng-controller="ledctrl as lc">
+	
+		<button ng-click="lc.tooglePower()">Power</button>
+		<input type="color" ng-model="color" ng-change="lc.changeColors()">
+		<input type="range" min="0" max="100" step="5" ng-model="brightness" ng-change="lc.changeBrightness()"/>
+    <button ng-click="lc.postRequest()">Post</button>
+		<p>{{msg}}</p>
+		<p>{{test}}</p>
+		
+	</section>
+
+	<script>
+	
+	var app = angular.module('LedStripApp', []);
+	app.controller('ledctrl', 
+	function($scope, $http) 
+	{
+    // for standalone testing-purposes
+    $scope.url = "http://192.168.0.136";
+    //placeholder#1
+		$scope.power = 0;
+    $scope.color = "#ffffff";
+		
+		this.tooglePower = function() {		
+			
+			$scope.power = ($scope.power == 0) ? 1 : 0;
+			$scope.test = $scope.url + "/power";
+			var response = $http.get($scope.url + "/power", {params:{"power": $scope.power}});
+			response.then(
+			// success
+			function(data, status, headers, config) {
+				$scope.msg = data.data;
+			},
+			// failure
+			function(data, status, headers, config) {
+				$scope.msg = data.data;
+			});
+		};
+		
+		this.changeColors = function() {		
+									
+			var response = $http.get($scope.url + "/color", {params:this.hexToRgb($scope.color)});
+			response.then(
+			// success
+			function(data, status, headers, config) {
+				$scope.msg = data.data;
+			},
+			// failure
+			function(data, status, headers, config) {
+				$scope.msg = data.data;
+			});
+		};
+		
+		this.changeBrightness = function() {		
+									
+			var response = $http.get($scope.url + "/brightness", {params:{"brightness": $scope.brightness}});
+			response.then(
+			// success
+			function(data, status, headers, config) {
+				$scope.msg = data.data;
+			},
+			// failure
+			function(data, status, headers, config) {
+				$scope.msg = data.data;
+			});
+		};
+    
+    this.postRequest = function() {
+				
+			var dataObj = {
+				name : "asdf",
+				employees : "gshgfdj",
+				headoffice : "asdhjkgkf"
+      };
+      
+      var response = $http.post($scope.url + '/post', dataObj, { headers : {'Content-Type' : 'text/plain; charset=UTF-8'}});
+      
+      response.then(
+			// success
+			function(data, status, headers, config) {
+				$scope.msg = data.data;
+				$scope.test = data.data.employees;
+			},
+			// failure
+			function(data, status, headers, config) {
+				alert( "failure message: " + JSON.stringify({data: data}));
+			});
+		};
+		
+		this.hexToRgb = function(hex) {
+			var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+			return result ? {
+				r: parseInt(result[1], 16),
+				g: parseInt(result[2], 16),
+				b: parseInt(result[3], 16)
+		} : null;
+}
+	});	
+	
+	</script>
+
+</body>
+</html>
+
