@@ -83,6 +83,7 @@
 				headoffice : "asdhjkgkf"
       };
       
+      // workaround: change content type to text/plain to be accepted from the server
       var response = $http.post($scope.url + '/post', dataObj, { headers : {'Content-Type' : 'text/plain; charset=UTF-8'}});
       
       response.then(
@@ -93,7 +94,7 @@
 			},
 			// failure
 			function(data, status, headers, config) {
-				alert( "failure message: " + JSON.stringify({data: data}));
+				$scope.msg = data;
 			});
 		};
 		
@@ -103,8 +104,8 @@
 				r: parseInt(result[1], 16),
 				g: parseInt(result[2], 16),
 				b: parseInt(result[3], 16)
-		} : null;
-}
+      } : null;
+    }
 	});	
 	
 	</script>

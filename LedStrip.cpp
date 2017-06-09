@@ -40,7 +40,7 @@ LedStrip::~LedStrip() {
 
 void LedStrip::powerOn(){
   power_ = true;
-  applyColors();
+  applySettings();
 }
 
 void LedStrip::powerOff(){
@@ -61,16 +61,12 @@ void LedStrip::setColors(int red, int green, int blue){
   red_ = boundaryCheck(red, 0, COLOR_RANGE);
   green_ = boundaryCheck(green, 0, COLOR_RANGE);
   blue_ = boundaryCheck(blue, 0, COLOR_RANGE);
-
-  if(power_)
-    applyColors();
+  applySettings();
 }
 
 void LedStrip::setBrightness(int brightness){
   brightness_ = (float) boundaryCheck(brightness, 0, 100)/100;
-  
-  if(power_)
-    applyColors();
+  applySettings();
 }
 
 int LedStrip::boundaryCheck(int var, int bottom, int top){
@@ -82,22 +78,62 @@ int LedStrip::boundaryCheck(int var, int bottom, int top){
   return var;
 }
 
-void LedStrip::applyColors(){
-  int r = red_, g = green_, b = blue_;
+void LedStrip::applySettings(){
+  
+  if(power_){
+    int r = red_, g = green_, b = blue_;
 
-  r = r*brightness_;
-  g = g*brightness_;
-  b = b*brightness_;
+    r = r*brightness_;
+    g = g*brightness_;
+    b = b*brightness_;
 
-  // invert output if necessary
-  if(inv_){
-    r = r ^ COLOR_RANGE;
-    g = g ^ COLOR_RANGE;
-    b = b ^ COLOR_RANGE;
+    // invert output if necessary
+    if(inv_){
+      r = r ^ COLOR_RANGE;
+      g = g ^ COLOR_RANGE;
+      b = b ^ COLOR_RANGE;
+    }
+
+    analogWrite(pin_red_, r);
+    analogWrite(pin_green_, g);
+    analogWrite(pin_blue_, b);
   }
-
-  analogWrite(pin_red_, r);
-  analogWrite(pin_green_, g);
-  analogWrite(pin_blue_, b);
 }
 
+bool LedStrip::generateJson(char* json, size_t b_size){
+  JsonObject& root = jsonBuffer_.createObject();
+  
+  if(root.success()){
+    root[JSON_BRIGHTNESS] = brightness_;
+    root[JSON_POWER] = (int) power_;
+    root[JSON_RED] = red_;
+    root[JSON_GREEN] = green_;
+    root[JSON_BLUE] = blue_;
+    
+    root.printTo(json, b_size);
+    
+    return true;
+  }
+  
+  // return root.printTo(char*);
+  return false;
+}
+
+bool LedStrip::parseJson(char* json){
+  
+  JsonObject& root = jsonBuffer_.parseObject(json);
+  
+  if(root.success()){
+    brightness_ = root[JSON_BRIGHTNESS].success() ? root[JSON_BRIGHTNESS] : brightness_;
+    power_ = root[JSON_POWER].success() ? (bool) root[JSON_POWER] : power_;
+    red_ = root[JSON_RED].success() ? root[JSON_RED] : red_;
+    green_ = root[JSON_GREEN].success() ? root[JSON_GREEN] : green_;
+    blue_ = root[JSON_BLUE].success() ? root[JSON_BLUE] : blue_;
+    
+    applySettings();
+    return true;
+  }
+  
+  return false;
+ 
+}

@@ -1,10 +1,12 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
+#include <ArduinoOTA.h>
 #include "FS.h"
 #include "LedStrip.h"
 #include "Password.h"
+
+const char * hostName = "LedStrip";
 
 ESP8266WebServer server(80);
 
@@ -105,8 +107,13 @@ void setup() {
     String message = "";
     for (uint8_t i=0; i<server.args(); i++){
       message += server.arg(i);
-  }
+    }
     Serial.println(message);
+    char json[] = "{\"brightness\":\"50\",\"power\":1,\"r\":\"255\", \"g\":\"0\" }"; //, \"b\":\"0\" }";
+    strip.parseJson(json);
+    char resp[JSON_BUFFER_SIZE];
+    strip.generateJson(resp, JSON_BUFFER_SIZE);
+    Serial.println(resp);
     server.send(200, "text/plain", message);
   });
 
@@ -120,19 +127,15 @@ void setup() {
   else
     Serial.println("Couldn't start file-system!");
 
-  if (!MDNS.begin("ledstrip")) {
-    Serial.println("Error setting up MDNS responder!");
-    while(1) { 
-      delay(1000);
-    }
-  }
-  Serial.println("mDNS responder started");
+  ArduinoOTA.setHostname(hostName);
+  ArduinoOTA.begin();
 
   strip.powerOff();
 }
 
 void loop() {
   server.handleClient();
+  ArduinoOTA.handle();
 }
 
 boolean readQueryParameter(String par_name, int &param){
@@ -147,6 +150,4 @@ boolean readQueryParameter(String par_name, int &param){
 
   return true;
 }
-
-
 
