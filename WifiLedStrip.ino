@@ -15,8 +15,6 @@ ESP8266WebServer server(80);
 #define GN D8
 
 LedStrip strip(RD, GN, BL, true);
-int readingIn = 0;
-bool automatic = false;
 
 void handleRoot() {  
   File f = SPIFFS.open("/index.html", "r");
@@ -39,49 +37,7 @@ void handleNotFound(){
   server.send(404, "text/plain", "File Not Found");
 }
 
-void handleColors(){
-  int r, g, b;
-
-  if(!readQueryParameter("r", r) || !readQueryParameter("g", g) || !readQueryParameter("b", b)){
-    server.send(200, "text/plain", "wrong query parameters given!");
-  }
-  else {
-    strip.setColors(r, g, b);
-    server.send(200, "text/plain", "colors changed!"); 
-  }
-}
-
-void handlePower(){
-  int power;
-
-  if(!readQueryParameter("power", power)){
-    server.send(200, "text/plain", "wrong query parameters given!");
-  }
-  else {
-    if(power){
-      strip.powerOn();
-      server.send(200, "text/plain", "power on!");
-    }
-    else {
-      strip.powerOff();
-      server.send(200, "text/plain", "power off!");
-    }  
-  } 
-}
-
-void handleBrightness(){
-  int brightness;
-
-  if(!readQueryParameter("brightness", brightness)){
-    server.send(200, "text/plain", "wrong query parameters given!");
-  }
-  else{
-    server.send(200, "text/plain", "brightness changed!");
-    strip.setBrightness(brightness); 
-  }   
-}
-
-void setup() {
+void setup(){
   Serial.begin(115200);
 
   WiFi.begin(ssid, password);
@@ -99,22 +55,18 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   server.on("/", handleRoot);
-  server.on("/power", handlePower);
-  server.on("/color", handleColors);
-  server.on("/brightness", handleBrightness);
+  server.on("/leds", HTTP_GET, []() {
+    char json[JSON_BUFFER_SIZE];
+    strip.generateJson(json, JSON_BUFFER_SIZE);
+    String tmp(json);
+    server.send(200, "text/plain", tmp);
+  });
 
-  server.on("/post", [](){
-    String message = "";
-    for (uint8_t i=0; i<server.args(); i++){
-      message += server.arg(i);
-    }
-    Serial.println(message);
-    char json[] = "{\"brightness\":\"50\",\"power\":1,\"r\":\"255\", \"g\":\"0\" }"; //, \"b\":\"0\" }";
+  server.on("/leds", HTTP_POST, [](){    
+    char json[JSON_BUFFER_SIZE];
+    server.arg("plain").toCharArray(json, JSON_BUFFER_SIZE); 
     strip.parseJson(json);
-    char resp[JSON_BUFFER_SIZE];
-    strip.generateJson(resp, JSON_BUFFER_SIZE);
-    Serial.println(resp);
-    server.send(200, "text/plain", message);
+    server.send(200, "text/plain");
   });
 
   server.onNotFound(handleNotFound);
@@ -129,25 +81,10 @@ void setup() {
 
   ArduinoOTA.setHostname(hostName);
   ArduinoOTA.begin();
-
-  strip.powerOff();
 }
 
-void loop() {
+void loop(){
   server.handleClient();
   ArduinoOTA.handle();
-}
-
-boolean readQueryParameter(String par_name, int &param){
-  String str_param = server.arg(par_name);
-
-  // parameter not found
-  if(str_param == "")
-    return false;
-    
-  // parameter found
-  param = str_param.toInt();
-
-  return true;
 }
 

@@ -6,9 +6,10 @@
 
 #define COLOR_RANGE 255
 
-#define JSON_BUFFER_SIZE 200
+#define JSON_BUFFER_SIZE 300
 #define JSON_BRIGHTNESS "brightness"
 #define JSON_POWER "power"
+#define JSON_COLOR "color"
 #define JSON_RED "r"
 #define JSON_GREEN "g"
 #define JSON_BLUE "b"
@@ -25,6 +26,7 @@ public:
   
   // set the intensity of the different colors 
   void setColors(int red, int green, int blue);
+  void setColors(char* color_char);
   void setBrightness(int brightness);
   
   // de- & serialize to JSON object
@@ -47,14 +49,14 @@ private:
   // high and low signals considering invertion 
   int HI_;
   int LO_;
-
-  StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer_;
   
   // fit the given value into the given boundaries
   int boundaryCheck(int var, int bottom, int top);
 
   // write the set colors to the output
   void applySettings();
+
+  String printColorString();
 };
 
 #endif

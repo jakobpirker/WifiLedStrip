@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" ng-app="LedStripApp">
 <head>
     <meta charset="UTF-8">
@@ -10,12 +10,10 @@
 
 	<section ng-controller="ledctrl as lc">
 	
-		<button ng-click="lc.tooglePower()">Power</button>
-		<input type="color" ng-model="color" ng-change="lc.changeColors()">
-		<input type="range" min="0" max="100" step="5" ng-model="brightness" ng-change="lc.changeBrightness()"/>
-    <button ng-click="lc.postRequest()">Post</button>
-		<p>{{msg}}</p>
-		<p>{{test}}</p>
+    <input type="checkbox" ng-model="leds.power" ng-change="lc.postChanges()">
+		<input type="color" ng-model="leds.color" ng-change="lc.postChanges()">
+		<input type="range" min="0" max="100" step="5" ng-model="leds.brightness" ng-change="lc.postChanges()"/>
+    <p>{{msg}}</p>
 		
 	</section>
 
@@ -25,89 +23,55 @@
 	app.controller('ledctrl', 
 	function($scope, $http) 
 	{
-    // for standalone testing-purposes
-    $scope.url = "http://192.168.0.136";
-    //placeholder#1
-		$scope.power = 0;
-    $scope.color = "#ffffff";
-		
-		this.tooglePower = function() {		
-			
-			$scope.power = ($scope.power == 0) ? 1 : 0;
-			$scope.test = $scope.url + "/power";
-			var response = $http.get($scope.url + "/power", {params:{"power": $scope.power}});
-			response.then(
-			// success
-			function(data, status, headers, config) {
-				$scope.msg = data.data;
-			},
-			// failure
-			function(data, status, headers, config) {
-				$scope.msg = data.data;
-			});
+	  // for standalone testing-purposes
+	  $scope.url = "http://192.168.0.136";
+	  //placeholder#1
+
+	  $scope.initialized = false;
+
+	  this.postChanges = function () {
+	    if ($scope.initialized) {
+	    
+	      var response = $http.post($scope.url + '/leds', $scope.leds);
+	      response.then(
+			  // success
+			  function (data, status, headers, config) {
+			    $scope.msg = "sending successfull";
+			  },
+			  // failure
+			  function (data, status, headers, config) {
+			    $scope.msg = "error on sending";
+			  });
+	    }
 		};
-		
-		this.changeColors = function() {		
-									
-			var response = $http.get($scope.url + "/color", {params:this.hexToRgb($scope.color)});
-			response.then(
-			// success
-			function(data, status, headers, config) {
-				$scope.msg = data.data;
-			},
-			// failure
-			function(data, status, headers, config) {
-				$scope.msg = data.data;
-			});
+
+	  this.getStatus = function (){
+	    
+	    var response = $http.get($scope.url + '/leds');
+	    response.then(
+      // success
+      function (data, status, headers, config) {
+        $scope.msg = "sending successfull";
+        $scope.leds = data.data;
+        $scope.initialized = true;
+      },
+      // failure
+      function (data, status, headers, config) {
+        $scope.resp = "error on sending";
+      });
 		};
-		
-		this.changeBrightness = function() {		
-									
-			var response = $http.get($scope.url + "/brightness", {params:{"brightness": $scope.brightness}});
-			response.then(
-			// success
-			function(data, status, headers, config) {
-				$scope.msg = data.data;
-			},
-			// failure
-			function(data, status, headers, config) {
-				$scope.msg = data.data;
-			});
-		};
-    
-    this.postRequest = function() {
-				
-			var dataObj = {
-				name : "asdf",
-				employees : "gshgfdj",
-				headoffice : "asdhjkgkf"
-      };
-      
-      // workaround: change content type to text/plain to be accepted from the server
-      var response = $http.post($scope.url + '/post', dataObj, { headers : {'Content-Type' : 'text/plain; charset=UTF-8'}});
-      
-      response.then(
-			// success
-			function(data, status, headers, config) {
-				$scope.msg = data.data;
-				$scope.test = data.data.employees;
-			},
-			// failure
-			function(data, status, headers, config) {
-				$scope.msg = data;
-			});
-		};
-		
-		this.hexToRgb = function(hex) {
-			var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-			return result ? {
-				r: parseInt(result[1], 16),
-				g: parseInt(result[2], 16),
-				b: parseInt(result[3], 16)
-      } : null;
-    }
+
+	  this.getStatus();
 	});	
 	
+  // suppress pre-flight request
+	app.config(function ($httpProvider) {
+	  $httpProvider.defaults.headers.common = {};
+	  $httpProvider.defaults.headers.post = {};
+	  $httpProvider.defaults.headers.put = {};
+	  $httpProvider.defaults.headers.patch = {};
+	});
+
 	</script>
 
 </body>

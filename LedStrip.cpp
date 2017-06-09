@@ -12,7 +12,7 @@ LedStrip::LedStrip(int pin_red, int pin_green, int pin_blue, boolean out_inverte
   green_ = COLOR_RANGE;
   brightness_ = 1;
 
-  analogWriteRange(255);
+  analogWriteRange(COLOR_RANGE);
 
   // consider possible invertion of the pins
   if(inv_){
@@ -64,6 +64,18 @@ void LedStrip::setColors(int red, int green, int blue){
   applySettings();
 }
 
+void LedStrip::setColors(char* color_char)
+{
+  long number = (long)strtol(&color_char[1], NULL, 16);
+
+  // Split them up into r, g, b values
+  int r = number >> 16;
+  int g = number >> 8 & 0xFF;
+  int b = number & 0xFF;
+
+  this->setColors(r, g, b);
+}
+
 void LedStrip::setBrightness(int brightness){
   brightness_ = (float) boundaryCheck(brightness, 0, 100)/100;
   applySettings();
@@ -100,40 +112,56 @@ void LedStrip::applySettings(){
   }
 }
 
+String LedStrip::printColorString()
+{
+  String ret = "#";
+
+  // ensure, that the string is printed with 2 numbers
+  ret += (String(red_, HEX).length() < 2) ? ("0" + String(red_, HEX)) : String(red_, HEX);
+  ret += (String(green_, HEX).length() < 2) ? ("0" + String(green_, HEX)) : String(green_, HEX);
+  ret += (String(blue_, HEX).length() < 2) ? ("0" + String(blue_, HEX)) : String(blue_, HEX);
+  return ret;
+}
+
 bool LedStrip::generateJson(char* json, size_t b_size){
-  JsonObject& root = jsonBuffer_.createObject();
-  
+  StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+
   if(root.success()){
-    root[JSON_BRIGHTNESS] = brightness_;
-    root[JSON_POWER] = (int) power_;
-    root[JSON_RED] = red_;
-    root[JSON_GREEN] = green_;
-    root[JSON_BLUE] = blue_;
+    root[JSON_BRIGHTNESS] = (int) (brightness_*100);
+    root[JSON_POWER] = power_;
+    root[JSON_COLOR] = this->printColorString();
     
     root.printTo(json, b_size);
     
     return true;
   }
   
-  // return root.printTo(char*);
   return false;
 }
 
 bool LedStrip::parseJson(char* json){
   
-  JsonObject& root = jsonBuffer_.parseObject(json);
-  
+  StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(json);
+
   if(root.success()){
-    brightness_ = root[JSON_BRIGHTNESS].success() ? root[JSON_BRIGHTNESS] : brightness_;
-    power_ = root[JSON_POWER].success() ? (bool) root[JSON_POWER] : power_;
-    red_ = root[JSON_RED].success() ? root[JSON_RED] : red_;
-    green_ = root[JSON_GREEN].success() ? root[JSON_GREEN] : green_;
-    blue_ = root[JSON_BLUE].success() ? root[JSON_BLUE] : blue_;
-    
+    if(root[JSON_BRIGHTNESS].success())
+      this->setBrightness(root[JSON_BRIGHTNESS]);
+
+    if (root[JSON_COLOR].success()) {
+      char temp[JSON_BUFFER_SIZE];
+      String tmpstring = root[JSON_COLOR].asString();
+      tmpstring.toCharArray(temp, JSON_BUFFER_SIZE);
+      this->setColors(temp);
+    }
+
+    if (root[JSON_POWER].success())
+      root[JSON_POWER] ? this->powerOn() : this->powerOff();
+
     applySettings();
     return true;
   }
   
-  return false;
- 
+  return false; 
 }
